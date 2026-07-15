@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-sans" });
@@ -30,8 +32,18 @@ export default function RootLayout({
         "font-sans",
         montserrat.variable,
       )}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
