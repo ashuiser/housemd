@@ -32,11 +32,16 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
 .agents
 skills-lock.json
+PLAN.md
+progress.md
+/docs
+prompt.md
 
 # typescript
 *.tsbuildinfo
