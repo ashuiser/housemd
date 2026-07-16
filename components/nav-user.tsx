@@ -8,6 +8,7 @@ import {
   RiSparkling2Line,
   RiVerifiedBadgeLine,
 } from "@remixicon/react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -36,6 +37,19 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
+  const userInitial = user.name
+    .split(" ")
+    .slice(0, 2)
+    .map((name) => name[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <SidebarMenu>
@@ -48,7 +62,9 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {userInitial}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -98,7 +114,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <RiLogoutCircleRLine />
               Log out
             </DropdownMenuItem>

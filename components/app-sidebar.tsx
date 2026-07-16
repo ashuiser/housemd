@@ -1,8 +1,8 @@
 "use client";
 
-// import { Command, Home, Inbox, Search, Sparkles } from "lucide-react";
 import { RiAttachmentLine, RiChatNewLine } from "@remixicon/react";
 import type * as React from "react";
+import { useEffect, useState } from "react";
 import { NavMain } from "@/components/nav-main";
 import { NavRecents } from "@/components/nav-recents";
 import {
@@ -11,19 +11,12 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  // SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { NavUser } from "./nav-user";
 
-// This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "New Chat",
@@ -35,149 +28,42 @@ const data = {
       url: "#",
       icon: RiAttachmentLine,
     },
-    // {
-    //   title: "Home",
-    //   url: "#",
-    //   icon: Home,
-    //   isActive: true,
-    // },
-    // {
-    //   title: "Inbox",
-    //   url: "#",
-    //   icon: Inbox,
-    //   badge: "10",
-    // },
   ],
   recents: [
-    {
-      name: "Travel Itinerary & Trip Planner",
-      url: "#",
-      emoji: "✈️",
-    },
-    {
-      name: "Photography Portfolio & Photo Journal",
-      url: "#",
-      emoji: "📸",
-    },
+    { name: "Travel Itinerary & Trip Planner", url: "#", emoji: "✈️" },
+    { name: "Photography Portfolio & Photo Journal", url: "#", emoji: "📸" },
     {
       name: "Cooking Challenges & Recipe Experiments",
       url: "#",
       emoji: "👨‍🍳",
     },
-    {
-      name: "Freelance Client Management",
-      url: "#",
-      emoji: "💼",
-    },
-    {
-      name: "Startup Ideas & Business Planning",
-      url: "#",
-      emoji: "🚀",
-    },
-    {
-      name: "Coding Projects & Developer Notes",
-      url: "#",
-      emoji: "💻",
-    },
-    {
-      name: "Music Playlist & Album Reviews",
-      url: "#",
-      emoji: "🎵",
-    },
-    {
-      name: "Pet Care & Veterinary Records",
-      url: "#",
-      emoji: "🐾",
-    },
-    {
-      name: "Wedding Planning Checklist",
-      url: "#",
-      emoji: "💍",
-    },
-    {
-      name: "Event Planning & Guest Management",
-      url: "#",
-      emoji: "🎉",
-    },
-    {
-      name: "Mental Wellness & Mood Journal",
-      url: "#",
-      emoji: "🧠",
-    },
-    {
-      name: "Meditation & Mindfulness Practice",
-      url: "#",
-      emoji: "🧘",
-    },
-    {
-      name: "Academic Research & Study Notes",
-      url: "#",
-      emoji: "🎓",
-    },
-    {
-      name: "Online Course Progress Tracker",
-      url: "#",
-      emoji: "📖",
-    },
-    {
-      name: "Job Search & Interview Preparation",
-      url: "#",
-      emoji: "🎯",
-    },
-    {
-      name: "Resume & Career Development",
-      url: "#",
-      emoji: "📄",
-    },
-    {
-      name: "Art Portfolio & Creative Inspiration",
-      url: "#",
-      emoji: "🎨",
-    },
-    {
-      name: "DIY Crafts & Handmade Projects",
-      url: "#",
-      emoji: "🛠️",
-    },
-    {
-      name: "Car Maintenance & Service History",
-      url: "#",
-      emoji: "🚗",
-    },
-    {
-      name: "Digital Marketing Campaign Planner",
-      url: "#",
-      emoji: "📈",
-    },
-    {
-      name: "Social Media Content Calendar",
-      url: "#",
-      emoji: "📱",
-    },
-    {
-      name: "Podcast Episodes & Listening Notes",
-      url: "#",
-      emoji: "🎙️",
-    },
-    {
-      name: "Gaming Progress & Achievement Tracker",
-      url: "#",
-      emoji: "🎮",
-    },
-    {
-      name: "Volunteer Activities & Community Service",
-      url: "#",
-      emoji: "🤝",
-    },
-    {
-      name: "Birthday & Gift Planning",
-      url: "#",
-      emoji: "🎁",
-    },
+    { name: "Freelance Client Management", url: "#", emoji: "💼" },
+    { name: "Startup Ideas & Business Planning", url: "#", emoji: "🚀" },
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
+    avatar: "",
+  });
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setUser({
+            name: data.name,
+            email: data.email,
+            avatar: "",
+          });
+        }
+      })
+      .catch((err) => console.error("Failed to fetch user:", err));
+  }, []);
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -193,9 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavRecents recents={data.recents} />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
+      <SidebarFooter>{user.name && <NavUser user={user} />}</SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
