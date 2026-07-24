@@ -6,18 +6,17 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const r2Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.CLOUDFLARE_R2_ENDPOINT!,
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION!,
   credentials: {
-    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 });
 
-const BUCKET = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
+const BUCKET = process.env.AWS_S3_BUCKET_NAME!;
 
-// Generate a presigned PUT URL for uploading a file to R2.
+// Generate a presigned PUT URL for uploading a file to S3.
 export async function generatePresignedPutUrl(params: {
   userId: string;
   sourceId: string;
@@ -34,10 +33,10 @@ export async function generatePresignedPutUrl(params: {
     ContentType: params.contentType,
   });
 
-  return getSignedUrl(r2Client, command, { expiresIn });
+  return getSignedUrl(s3Client, command, { expiresIn });
 }
 
-// Generate a presigned GET URL for downloading a file from R2. Used by the ingestion worker webhook to fetch parsed results if needed.
+// Generate a presigned GET URL for downloading a file from S3. Used by the ingestion worker webhook to fetch parsed results if needed.
 export async function generatePresignedGetUrl(params: {
   key: string;
   expiresIn?: number;
@@ -49,11 +48,11 @@ export async function generatePresignedGetUrl(params: {
     Key: key,
   });
 
-  return getSignedUrl(r2Client, command, { expiresIn });
+  return getSignedUrl(s3Client, command, { expiresIn });
 }
 
-// Build the R2 object key from its constituent parts.
-export function buildR2Key(
+// Build the S3 object key from its constituent parts.
+export function buildS3Key(
   userId: string,
   sourceId: string,
   fileName: string,
