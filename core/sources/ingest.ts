@@ -32,16 +32,37 @@ export async function processSourceIngestion(
     );
 
     // 3. Upsert to Pinecone
-    const pineconeVectors = docs.map((doc, i) => ({
-      id: `${sourceId}_chunk_${i}`,
-      values: vectors[i],
-      metadata: {
-        sourceId,
-        userId,
-        text: doc.pageContent,
-        ...doc.metadata,
-      },
-    }));
+    const pineconeVectors = docs.map((doc, i) => {
+      // Pinecone only allows string, number, boolean, or array of strings in metadata
+      const safeMetadata: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(doc.metadata)) {
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean"
+        ) {
+          safeMetadata[key] = value;
+        } else if (
+          Array.isArray(value) &&
+          value.every((v) => typeof v === "string")
+        ) {
+          safeMetadata[key] = value;
+        } else {
+          safeMetadata[key] = JSON.stringify(value);
+        }
+      }
+
+      return {
+        id: `${sourceId}_chunk_${i}`,
+        values: vectors[i],
+        metadata: {
+          sourceId,
+          userId,
+          text: doc.pageContent,
+          ...safeMetadata,
+        },
+      };
+    });
 
     const batchSize = 100;
     for (let i = 0; i < pineconeVectors.length; i += batchSize) {
@@ -63,5 +84,6 @@ export async function processSourceIngestion(
       .update(sources)
       .set({ status: "failed" })
       .where(and(eq(sources.id, sourceId), eq(sources.userId, userId)));
+    throw error;
   }
 }

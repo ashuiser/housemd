@@ -28,7 +28,10 @@ const UNVERIFIED_ROUTES = [
 ];
 
 // Prefixes that bypass the proxy entirely
-const BYPASS_PREFIXES = ["/_next", "/favicon.ico", "/api/webhooks"];
+const BYPASS_PREFIXES = ["/_next", "/favicon.ico"];
+
+// Webhook routes that use API key/Bearer token auth
+const WEBHOOK_ROUTES = ["/api/webhooks/llamaparse"];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.includes(pathname);
@@ -40,6 +43,10 @@ function isUnverifiedRoute(pathname: string): boolean {
 
 function shouldBypass(pathname: string): boolean {
   return BYPASS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isWebhookRoute(pathname: string): boolean {
+  return WEBHOOK_ROUTES.some((route) => pathname.startsWith(route));
 }
 
 function isApiRoute(pathname: string): boolean {
@@ -63,9 +70,18 @@ function redirectToVerify(request: NextRequest): NextResponse {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Static assets, webhooks — skip entirely
+  // Static assets — skip entirely
   if (shouldBypass(pathname)) {
     return NextResponse.next();
+  }
+
+  // Webhooks — API key / Bearer token auth
+  if (isWebhookRoute(pathname)) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader === `Bearer ${process.env.LLAMAPARSE_WEBHOOK_SECRET}`) {
+      return NextResponse.next();
+    }
+    return unauthorizedJson();
   }
 
   // Public routes — always accessible
