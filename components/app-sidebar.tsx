@@ -1,6 +1,10 @@
 "use client";
 
-import { RiAttachmentLine, RiChatNewLine } from "@remixicon/react";
+import {
+  RiAttachmentLine,
+  RiChatNewLine,
+  RiShieldCheckLine,
+} from "@remixicon/react";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { NavMain } from "@/components/nav-main";
@@ -20,13 +24,18 @@ const data = {
   navMain: [
     {
       title: "New Chat",
-      url: "#",
+      url: "/dashboard/chat",
       icon: RiChatNewLine,
     },
     {
       title: "Sources",
-      url: "#",
+      url: "/dashboard/sources",
       icon: RiAttachmentLine,
+    },
+    {
+      title: "Trusted Domains",
+      url: "/dashboard/trusted-domains",
+      icon: RiShieldCheckLine,
     },
   ],
   recents: [
