@@ -38,17 +38,6 @@ const data = {
       icon: RiShieldCheckLine,
     },
   ],
-  recents: [
-    { name: "Travel Itinerary & Trip Planner", url: "#", emoji: "✈️" },
-    { name: "Photography Portfolio & Photo Journal", url: "#", emoji: "📸" },
-    {
-      name: "Cooking Challenges & Recipe Experiments",
-      url: "#",
-      emoji: "👨‍🍳",
-    },
-    { name: "Freelance Client Management", url: "#", emoji: "💼" },
-    { name: "Startup Ideas & Business Planning", url: "#", emoji: "🚀" },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -57,6 +46,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: "",
     avatar: "",
   });
+
+  const [chats, setChats] = useState<{ id: string; title: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -73,6 +64,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .catch((err) => console.error("Failed to fetch user:", err));
   }, []);
 
+  useEffect(() => {
+    const fetchChats = () => {
+      fetch("/api/chats")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setChats(data))
+        .catch((err) => console.error("Failed to fetch chats:", err));
+    };
+    fetchChats();
+  }, []);
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -86,7 +87,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarHeader>
       <SidebarContent>
-        <NavRecents recents={data.recents} />
+        <NavRecents
+          recents={chats.map((c) => ({
+            name: c.title,
+            url: `/dashboard/chat?id=${c.id}`,
+            emoji: "",
+          }))}
+        />
       </SidebarContent>
       <SidebarFooter>{user.name && <NavUser user={user} />}</SidebarFooter>
       <SidebarRail />
