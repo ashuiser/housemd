@@ -1,39 +1,46 @@
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { ChatOpenAI } from "@langchain/openai";
-import { type DynamicTool, createAgent as lcCreateAgent } from "langchain";
+import { createAgent, summarizationMiddleware } from "langchain";
+import { tavilySearch } from "./tools/tavily";
+import { pineconeSearch } from "./tools/pinecone";
 
-let checkpointer: PostgresSaver | null = null;
-let setupDone = false;
+const llm = new ChatOpenAI({
+  model: "gpt-5-nano",
+});
 
-export async function getCheckpointer(): Promise<PostgresSaver> {
-  if (!checkpointer) {
-    // biome-ignore lint/style/noNonNullAssertion: ignore
-    const DB_URI = process.env.NEON_DATABASE_URL!;
-    checkpointer = PostgresSaver.fromConnString(DB_URI);
-  }
-  if (!setupDone) {
-    await checkpointer.setup();
-    setupDone = true;
-  }
-  return checkpointer;
+const globalForAgent = globalThis as unknown as {
+  checkpointer?: PostgresSaver;
+  agent?: ReturnType<typeof createAgent>;
+};
+
+const DB_URI = process.env.NEON_DATABASE_URL;
+if (!DB_URI) {
+  throw new Error("NEON_DATABASE_URL is not defined.");
 }
 
-export async function createAgent() {
-  const llm = new ChatOpenAI({
-    model: "gpt-4o-mini",
-    temperature: 0,
-  });
+export const checkpointer =
+  globalForAgent.checkpointer ?? PostgresSaver.fromConnString(DB_URI);
 
-  const checkpointer = await getCheckpointer();
-
-  const tools: DynamicTool<string, unknown>[] = [];
-
-  const agent = lcCreateAgent({
+export const Agent =
+  globalForAgent.agent ??
+  createAgent({
     model: llm,
-    tools,
+    tools: [tavilySearch, pineconeSearch],
+    middleware: [
+      summarizationMiddleware({
+        model: llm,
+        trigger: { tokens: 4000 },
+        keep: { messages: 20 },
+      }),
+    ],
     checkpointer,
-    systemPrompt: "You are HouseMD, an intelligent medical AI assistant.",
+    systemPrompt: `You are HouseMD, an intelligent medical AI assistant.
+You have access to a Tavily internet search tool and a Pinecone search tool.
+If the user asks about something that requires up-to-date knowledge or something from their uploaded files, use the appropriate tool.
+For uploaded documents, ALWAYS use the pinecone_search tool to find context. Don't tell anything which is not in the documents provided or web search results.`,
   });
 
-  return agent;
+if (process.env.NODE_ENV !== "production") {
+  globalForAgent.checkpointer = checkpointer;
+  globalForAgent.agent = Agent;
 }

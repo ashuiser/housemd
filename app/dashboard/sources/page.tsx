@@ -82,7 +82,6 @@ export default function SourcesPage() {
     setError(null);
 
     try {
-      // 1. Initiate upload
       const initiateRes = await fetch("/api/sources/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,10 +99,8 @@ export default function SourcesPage() {
 
       const { uploadUrl } = await initiateRes.json();
 
-      // Optimistically fetch sources to show the 'uploading' row
       fetchSources();
 
-      // 2. Upload to S3 directly
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
@@ -115,9 +112,6 @@ export default function SourcesPage() {
       if (!uploadRes.ok) {
         throw new Error("Failed to upload file to storage");
       }
-
-      // The ingestion worker handles the rest (picking it up from S3 and calling LlamaParse)
-      // For now, we just wait for polling to reflect the status changes.
       fetchSources();
     } catch (err) {
       setError(
@@ -125,7 +119,6 @@ export default function SourcesPage() {
       );
     } finally {
       setIsUploading(false);
-      // Reset input
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };

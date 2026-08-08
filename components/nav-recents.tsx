@@ -6,6 +6,7 @@ import {
   RiLink,
   RiMoreLine,
 } from "@remixicon/react";
+import Link from "next/link";
 
 import {
   DropdownMenu,
@@ -40,12 +41,12 @@ export function NavRecents({
       <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
       <SidebarMenu>
         {recents.map((item) => (
-          <SidebarMenuItem key={item.name}>
+          <SidebarMenuItem key={item.url}>
             <SidebarMenuButton asChild>
-              <a href={item.url} title={item.name}>
+              <Link href={item.url} title={item.name}>
                 <span>{item.emoji}</span>
                 <span>{item.name}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

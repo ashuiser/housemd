@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import * as z from "zod";
 import { getAccessTokenFromRequest } from "@/core/auth/session";
 import { verifyAccessToken } from "@/core/auth/tokens";
 import { db } from "@/core/db/client";
@@ -46,36 +47,26 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Normalization logic
-    let rawPrefix = (body.prefix || "").trim();
-    if (rawPrefix.startsWith("http://")) rawPrefix = rawPrefix.slice(7);
-    if (rawPrefix.startsWith("https://")) rawPrefix = rawPrefix.slice(8);
-    if (rawPrefix.endsWith("/")) rawPrefix = rawPrefix.slice(0, -1);
-
-    const parsed = addTrustedDomainSchema.safeParse({
-      ...body,
-      prefix: rawPrefix,
-    });
+    const parsed = addTrustedDomainSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten() },
+        { error: "Invalid input", details: z.flattenError(parsed.error) },
         { status: 400 },
       );
     }
 
-    const { prefix, scope } = parsed.data;
+    const { url } = parsed.data;
 
-    const [domain] = await db
+    const [insertedDomain] = await db
       .insert(trustedDomains)
       .values({
         userId: payload.userId,
-        prefix,
-        scope,
+        url,
       })
       .returning();
 
-    return NextResponse.json(domain, { status: 201 });
+    return NextResponse.json(insertedDomain, { status: 201 });
   } catch (error) {
     console.error("Add trusted domain error:", error);
     return NextResponse.json(

@@ -99,7 +99,7 @@ export async function proxy(request: NextRequest) {
     return isApiRoute(pathname) ? unauthorizedJson() : redirectToLogin(request);
   }
 
-  // ── Everything below requires a verified JWT ─────────────────────────
+  // Everything below requires a verified JWT
   const accessToken = getAccessTokenFromRequest(request);
   const refreshToken = getRefreshTokenFromRequest(request);
 

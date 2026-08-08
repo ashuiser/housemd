@@ -1,0 +1,1 @@
+ALTER TABLE "trusted_domains" RENAME COLUMN "domain" TO "url";

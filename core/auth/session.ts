@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
 import type { NextRequest, NextResponse } from "next/server";
+import { db } from "../db/client";
+import { chats } from "../db/schema";
+import { verifyAccessToken, verifyRefreshToken } from "./tokens";
 
 const ACCESS_COOKIE = "hmd_access";
 const REFRESH_COOKIE = "hmd_refresh";
@@ -57,6 +61,65 @@ export function getRefreshTokenFromRequest(
   request: NextRequest,
 ): string | undefined {
   return request.cookies.get(REFRESH_COOKIE)?.value;
+}
+
+export async function getUserIdFromReq(req: NextRequest) {
+  // Try access token first (zero Redis/Postgres hits if valid)
+  let userId: string | null = null;
+  const accessTokenValue = getAccessTokenFromRequest(req);
+  if (accessTokenValue) {
+    const payload = await verifyAccessToken(accessTokenValue);
+    if (payload) {
+      userId = payload.userId;
+    }
+  }
+
+  if (!userId) {
+    // Access token expired/missing — try refresh token (Redis hit, no Postgres)
+    const refreshTokenValue = getRefreshTokenFromRequest(req);
+    if (refreshTokenValue) {
+      const data = await verifyRefreshToken(refreshTokenValue);
+      if (data) {
+        userId = data.userId;
+      }
+    }
+  }
+
+  return userId;
+}
+
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+export async function isChatIdValidAndExists(threadId: string): Promise<{
+  isValid: boolean;
+  exists: boolean;
+  userId: string | null;
+}> {
+  if (!isValidUUID(threadId)) {
+    return {
+      isValid: false,
+      exists: false,
+      userId: null,
+    };
+  }
+  const chatData = await db.select().from(chats).where(eq(chats.id, threadId));
+
+  if (chatData.length === 0) {
+    return {
+      isValid: true,
+      exists: false,
+      userId: null,
+    };
+  }
+  return {
+    isValid: true,
+    exists: true,
+    userId: chatData[0].userId,
+  };
 }
 
 export { ACCESS_COOKIE, REFRESH_COOKIE };

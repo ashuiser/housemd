@@ -90,7 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavRecents
           recents={chats.map((c) => ({
             name: c.title,
-            url: `/dashboard/chat?id=${c.id}`,
+            url: `/dashboard/chat?chatId=${c.id}`,
             emoji: "",
           }))}
         />

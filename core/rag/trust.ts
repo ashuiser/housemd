@@ -5,42 +5,44 @@ import { trustedDomains } from "@/core/db/schema";
 /**
  * Verifies if a given URL matches any of the user's trusted domain/path rules.
  */
-export async function isUrlTrusted(
+export async function areUrlsTrusted(
   userId: string,
-  urlToCheck: string,
-): Promise<boolean> {
+  urlsToCheck: string[],
+): Promise<boolean[]> {
+  const size = urlsToCheck.length;
   try {
-    const parsedUrl = new URL(urlToCheck);
-    const hostname = parsedUrl.hostname;
-    // URL pathname always starts with '/'
-    // We combine them to match against rules like `example.com/docs`
-    const fullPathToCheck = `${hostname}${parsedUrl.pathname}`;
-
-    const rules = await db
+    const urls = await db
       .select()
       .from(trustedDomains)
       .where(eq(trustedDomains.userId, userId));
+    const parsedUrls = urls.map((u) => new URL(u.url));
+    const pathNames = parsedUrls.map((u) => u.pathname);
+    const hostnames = parsedUrls.map((u) => u.hostname);
 
-    for (const rule of rules) {
-      if (rule.scope === "domain") {
-        // Domain scope matches exact domain or any subdomain
-        // Example: rule "wikipedia.org" matches "en.wikipedia.org" but not "fake-wikipedia.org"
-        if (hostname === rule.prefix || hostname.endsWith(`.${rule.prefix}`)) {
-          return true;
-        }
-      } else if (rule.scope === "path") {
-        // Path scope matches if the domain+path starts with the rule prefix
-        // Example: rule "mdjournal.com/docs" matches "mdjournal.com/docs/lungs"
-        if (fullPathToCheck.startsWith(rule.prefix)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return urlsToCheck.map((u) => {
+      const { hostname, pathname } = new URL(u);
+      return isUrlTrusted(pathname, hostname, pathNames, hostnames);
+    });
   } catch (error) {
     // If URL is unparseable or DB query fails, default to untrusted for security
-    console.error(`isUrlTrusted error for URL ${urlToCheck}:`, error);
-    return false;
+    console.error("areUrlsTrusted error for URL: ", error);
+    return Array.from({ length: size }, () => false);
   }
+}
+
+function isUrlTrusted(
+  pathnameToCheck: string,
+  hostnameToCheck: string,
+  pathnames: string[],
+  hostnames: string[],
+): boolean {
+  for (let i = 0; i < pathnames.length; i++) {
+    if (
+      hostnames[i] === hostnameToCheck &&
+      pathnames[i].startsWith(pathnameToCheck)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

@@ -16,11 +16,6 @@ export const sourceStatusEnum = pgEnum("source_status", [
   "failed",
 ]);
 
-export const trustedDomainScopeEnum = pgEnum("trusted_domain_scope", [
-  "domain",
-  "path",
-]);
-
 export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 
 export const internetModeEnum = pgEnum("internet_mode", [
@@ -62,8 +57,7 @@ export const trustedDomains = pgTable("trusted_domains", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  prefix: text().notNull(),
-  scope: trustedDomainScopeEnum().notNull(),
+  url: text().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

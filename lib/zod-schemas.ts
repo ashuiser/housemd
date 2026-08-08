@@ -47,18 +47,7 @@ export const initiateUploadSchema = z.object({
 });
 
 export const addTrustedDomainSchema = z.object({
-  prefix: z
-    .string()
-    .min(1, { error: "Prefix is required" })
-    .max(500)
-    .refine(
-      (val) => {
-        // Must look like a domain or domain/path — no protocol, no trailing slash
-        return /^[a-zA-Z0-9][a-zA-Z0-9.-]+(\/[^\s]*)?$/.test(val);
-      },
-      { error: "Must be a valid domain or domain/path (no protocol)" },
-    ),
-  scope: z.enum(["domain", "path"]),
+  url: z.url(),
 });
 
 export const deleteTrustedDomainSchema = z.object({

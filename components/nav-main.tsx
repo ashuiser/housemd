@@ -1,6 +1,7 @@
 "use client";
 
 import type { RemixiconComponentType } from "@remixicon/react";
+import Link from "next/link";
 
 import {
   SidebarMenu,
@@ -23,10 +24,10 @@ export function NavMain({
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={item.isActive}>
-            <a href={item.url}>
+            <Link href={item.url}>
               <item.icon />
               <span>{item.title}</span>
-            </a>
+            </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}

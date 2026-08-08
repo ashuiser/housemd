@@ -2,19 +2,10 @@
 
 import { RiDeleteBinLine, RiShieldCheckLine } from "@remixicon/react";
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import LoaderContent from "@/components/loading-content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -24,82 +15,63 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface TrustedDomain {
+interface TrustedURL {
   id: string;
-  prefix: string;
-  scope: "domain" | "path";
+  url: string;
   createdAt: string;
 }
 
-const items: {
-  label: string;
-  value: "domain" | "path";
-}[] = [
-  { label: "Domain", value: "domain" },
-  { label: "Path Only", value: "path" },
-];
-
-export default function TrustedDomainsPage() {
-  const [domains, setDomains] = useState<TrustedDomain[]>([]);
-  const [prefix, setPrefix] = useState("");
-  const [scope, setScope] = useState<"domain" | "path">("domain");
+export default function TrustedUrlsPage() {
+  const [trustedUrls, setTrustedUrls] = useState<TrustedURL[]>([]);
+  const [url, setUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchDomains = useCallback(async () => {
+  const fetchUrls = useCallback(async () => {
     try {
-      const res = await fetch("/api/trusted-domains");
+      setIsLoading(true);
+      const res = await fetch("/api/trusted-urls");
       if (res.ok) {
         const data = await res.json();
-        setDomains(data);
+        setTrustedUrls(data);
       }
     } catch (err) {
-      console.error("Failed to fetch trusted domains", err);
+      console.error("Failed to fetch trusted urls", err);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDomains();
-  }, [fetchDomains]);
-
-  // Normalize input continuously so user sees the cleaned version
-  const handlePrefixChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.trim();
-    if (val.startsWith("http://")) val = val.slice(7);
-    if (val.startsWith("https://")) val = val.slice(8);
-    // don't trim trailing slash while typing since they might be adding a path
-    setPrefix(val);
-    setError(null);
-  };
+    fetchUrls();
+  }, [fetchUrls]);
 
   const handleAdd = async (e: React.SubmitEvent) => {
     e.preventDefault();
-    if (!prefix) return;
+    if (!url) return;
 
     setIsAdding(true);
     setError(null);
 
-    // Normalize one last time before submit
-    let finalPrefix = prefix.trim();
-    if (finalPrefix.endsWith("/")) finalPrefix = finalPrefix.slice(0, -1);
+    const finalUrl = url.trim();
 
     try {
-      const res = await fetch("/api/trusted-domains", {
+      const res = await fetch("/api/trusted-urls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prefix: finalPrefix, scope }),
+        body: JSON.stringify({ url: finalUrl }),
       });
 
       if (!res.ok) {
         const err = await res.json();
         throw new Error(
-          err.details?.prefix?.[0] || err.error || "Failed to add domain",
+          err.details?.prefix?.[0] || err.error || "Failed to add url",
         );
       }
 
-      setPrefix("");
-      setScope("domain");
-      fetchDomains();
+      setUrl("");
+      fetchUrls();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -109,14 +81,14 @@ export default function TrustedDomainsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/trusted-domains/${id}`, {
+      const res = await fetch(`/api/trusted-urls/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete domain");
-      setDomains(domains.filter((d) => d.id !== id));
+      if (!res.ok) throw new Error("Failed to delete url");
+      setTrustedUrls(trustedUrls.filter((d) => d.id !== id));
     } catch (err) {
       console.error(err);
-      setError("Failed to delete domain");
+      setError("Failed to delete url");
     }
   };
 
@@ -131,11 +103,11 @@ export default function TrustedDomainsPage() {
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Trusted Domains</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Trusted Urls</h2>
       </div>
 
       <p className="text-muted-foreground mb-4">
-        Add website domains or specific paths that the AI agent is allowed to
+        Add website urls or specific paths that the AI agent is allowed to
         search and read from.
       </p>
 
@@ -147,40 +119,18 @@ export default function TrustedDomainsPage() {
         >
           <div className="flex-1 w-full space-y-1">
             <Label htmlFor="url-input" className="mb-2 ml-1">
-              URL / Domain
+              URL (must include http:// or https://)
             </Label>
+            <p></p>
             <Input
               id="url-input"
-              placeholder="e.g., wikipedia.org or example.com/docs"
-              value={prefix}
-              onChange={handlePrefixChange}
+              placeholder="e.g., https://www.wikipedia.org or http://example.com/docs"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
               disabled={isAdding}
             />
           </div>
-          <div className="w-full sm:w-48 space-y-1">
-            <Label htmlFor="scope" className="mb-2 ml-1">
-              Scope
-            </Label>
-            <Select
-              value={scope}
-              onValueChange={(value) => setScope(value as "domain" | "path")}
-            >
-              <SelectTrigger className="w-full max-w-48 mb-0" id="scope">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Scope</SelectLabel>
-                  {items.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" disabled={!prefix || isAdding}>
+          <Button type="submit" disabled={!url || isAdding}>
             {isAdding ? "Adding..." : "Add"}
           </Button>
         </form>
@@ -192,14 +142,19 @@ export default function TrustedDomainsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Prefix</TableHead>
-              <TableHead>Scope</TableHead>
+              <TableHead>URL</TableHead>
               <TableHead>Added</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {domains.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={4}>
+                  <LoaderContent text="Loading trusted urls..." />
+                </TableCell>
+              </TableRow>
+            ) : trustedUrls.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={4}
@@ -207,31 +162,20 @@ export default function TrustedDomainsPage() {
                 >
                   <div className="flex flex-col items-center justify-center gap-2">
                     <RiShieldCheckLine className="h-8 w-8 text-muted-foreground/50" />
-                    <p>No trusted domains yet.</p>
+                    <p>No trusted urls yet.</p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              domains.map((domain) => (
-                <TableRow key={domain.id}>
-                  <TableCell className="font-medium">{domain.prefix}</TableCell>
-                  <TableCell>
-                    {domain.scope === "domain" ? (
-                      <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 shadow-none border-0">
-                        Domain
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 shadow-none border-0">
-                        Path
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDate(domain.createdAt)}</TableCell>
+              trustedUrls.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium">{d.url}</TableCell>
+                  <TableCell>{formatDate(d.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(domain.id)}
+                      onClick={() => handleDelete(d.id)}
                       className="text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-500/10"
                     >
                       <RiDeleteBinLine className="h-4 w-4" />
